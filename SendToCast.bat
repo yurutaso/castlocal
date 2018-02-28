@@ -1,0 +1,1 @@
+/path/to/python.exe /path/to/cast.py "name of the cast device" %1
