@@ -7,7 +7,8 @@ import sys
 import time
 import threading
 import atexit
-import keyListener
+from keyListener import listen, defaultKeyEventHandler
+from player import Player
 
 # Configuration of HTTPServer
 PORT = 8080
@@ -133,13 +134,14 @@ def main():
     atexit.register(disconnect)
 
     # Start streaming
-    c = streamFileTo(filename, cast)
-    if c is None:
+    controller = streamFileTo(filename, cast)
+    if controller is None:
         print("Unable to start streaming")
         sys.exit(1)
 
     # Listen key event
-    keyListener.listen(c)
+    player = Player(controller)
+    listen(player, defaultKeyEventHandler)
 
 if __name__ == '__main__':
     main()
