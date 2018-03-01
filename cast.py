@@ -12,18 +12,22 @@ from keyListener import listen, defaultKeyEventHandler
 from player import Player
 
 # Configuration of HTTPServer
-IP_ADDRESS = "192.168.11.18"
+
+def getIPAddress():
+    import socket
+    return [(s.connect(('8.8.8.8', 80)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
 
 def getMediaURL(filepath, port=8080):
     """
     Returns a URL of the media as a absolute path.
     """
+    ip = getIPAddress()
     if len(filepath) == 0:
-        return 'http://'+IP_ADDRESS+':'+str(port)
+        return 'http://'+ip+':'+str(port)
     if os.name == 'nt':
-        return 'http://'+IP_ADDRESS+':'+str(port)+'/'+path.abspath(filepath)
+        return 'http://'+ip+':'+str(port)+'/'+path.abspath(filepath)
     else:
-        return 'http://'+IP_ADDRESS+':'+str(port)+path.abspath(filepath)
+        return 'http://'+ip+':'+str(port)+path.abspath(filepath)
 
 def HTTPServer(filepath, port=8080):
     from flask import Flask, send_from_directory
