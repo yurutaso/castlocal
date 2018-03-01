@@ -78,7 +78,6 @@ else:
 def listen(player, keyEventHandler):
     print('Press q to exit.')
     print('Press h to show key maps.')
-    import time
     while True:
         char = getInput()
         player.update()
@@ -89,11 +88,11 @@ def defaultKeyEventHandler(player, char):
     if char is None:
         return
     elif char  == 'q' or char == '\x1b':
-        print('Exit.')
+        print('Stoping cast.')
         player.stop()
         return 0
     elif char == 'c':
-        print(player.getCurrentTime())
+        print(player.getCurrentTime(), '/', player.controller.status.duration, 'sec')
     elif char == 'i':
         player.seek(0.) # restart
     elif char == 'b':
@@ -121,7 +120,11 @@ def defaultKeyEventHandler(player, char):
         print("""
 Keymaps:
     q: exit
+    c: show the current player position
     <space>: pause/play
+
+    <up-arrow>: volume up
+    <down-arrow>: volume down
 
     <right-arrow>: forward by 10sec
     f: forward by 1min
@@ -132,4 +135,4 @@ Keymaps:
     B: backward by 5min
 
     0-9: seek to 10*N % position
-    i: seek to the start position""")
+    i: restart""")

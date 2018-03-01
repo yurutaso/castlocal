@@ -7,6 +7,8 @@ import sys
 import time
 import threading
 import atexit
+import subprocess
+import tempfile
 from keyListener import listen, defaultKeyEventHandler
 from player import Player
 
@@ -104,6 +106,7 @@ def streamURLTo(url, cast):
         try:
             # try to stop media just in case of unusual termination.
             cast.media_controller.stop()
+            time.sleep(2.) # wait until the cast device close the file.
         except:
             pass
     atexit.register(stop)
@@ -116,7 +119,17 @@ def streamFileTo(filepath, cast):
     stream runs a local HTTP server using Flask to serve the file through HTTP request,
     then send the URL of the file to the cast device.
     """
-    # Start HTTP server as a thread
+
+    model = cast.device.model_name
+    if not ['Google Home', 'Chromecast'].__contains__(model):
+        print('model must be "Chromecast" or "Google Home"')
+        sys.exit(1)
+    # check if the media is readable by the cast device
+    # If not, convert it to mp3 (Google Home) or mp4 (Chromecast) with ffmpeg.
+    # "filepath" is updated to the generated (temporaly) file in this case.
+    filepath = checkMedia(filepath, model)
+
+    # Start HTTP server as a daemon with thread
     print("Starting HTTP server.")
     t = threading.Thread(target=HTTPServer, args=[filepath])
     t.daemon = True # NOTE: running HTTP server as a daemon process is necessary.
@@ -125,6 +138,131 @@ def streamFileTo(filepath, cast):
 
     # Stream the media from the local web server.
     return streamURLTo(getMediaURL(filepath), cast)
+
+def getStreams(filepath):
+    """
+    Get information of audio/video streams using FFMPEG
+    """
+    raw = subprocess.getoutput(['ffmpeg', '-i', filepath])
+    stream = {'containers': [], 'audio':[], 'video':[]}
+    try:
+        Input = raw.split('Input')[1]
+        stream['container'] = [s.strip() for s in Input.split('from')[0].split(',')[1:-1]]
+        streams = Input.split('Stream ')[1:]
+        for s in streams:
+            stream_map = s.split('(')[0][1:]
+            stream_format = s.split(':')[3].split('(')[0].strip()
+            stream_type = s.split(':')[2].strip()
+            if stream_type == 'Audio':
+                stream['audio'].append({'map': stream_map, 'format': stream_format})
+            if stream_type == 'Video':
+                stream['video'].append({'map': stream_map, 'format': stream_format})
+        return stream
+    except:
+        return {'container': [], 'audio': [], 'video': []}
+
+def convertToMP3(filepath, fileout):
+    cmd = ['ffmpeg', '-loglevel', 'error', '-y', '-i', filepath, '-vn']
+    audiostreams = getStreams(filepath)['audio']
+    try:
+        audiostream = audiostreams[0]
+        cmd.append('-map')
+        cmd.append(audiostream['map'])
+        if audiostream['format'] == 'mp3':
+            cmd.append('-acodec')
+            cmd.append('copy')
+    except IndexError:
+        print('No audio stream found.')
+        sys.exit(1)
+    cmd.append(fileout)
+    return subprocess.run(cmd)
+
+def convertToMP4(filepath, fileout):
+    cmd = ['ffmpeg', '-loglevel', 'error', '-y', '-i', filepath]
+
+    streams = getStreams(filepath)
+    try:
+        audiostream = streams['audio'][0]
+        if audiostream['format'] == 'aac':
+            cmd.append('-acodec')
+            cmd.append('copy')
+    except IndexError:
+        audiostream = None
+    try:
+        videostream = streams['video'][0]
+        if videostream['format'] == 'h264':
+            cmd.append('-vcodec')
+            cmd.append('copy')
+    except IndexError:
+        videostream = None
+
+    if (audiostream is None) and (videostream is None):
+        print('Neither audio nor video found.')
+        sys.exit(1)
+    cmd.append(fileout)
+    return subprocess.run(cmd)
+
+def rmtmp(filepath, timeout=5.):
+    try:
+        print('cleanup tempfile')
+        os.remove(filepath)
+    except PermissionError:
+        print('cleanup failed by PermissionError.')
+        print('retry after', timeout,'seconds.')
+        time.sleep(timeout)
+        try:
+            os.remove(filepath)
+        except PermissionError:
+            print('Failed. You should manually remove ', filepath)
+
+def checkMedia(filepath, model):
+    streams = getStreams(filepath)
+    try:
+        audiostream = streams['audio'][0]
+    except IndexError:
+        audiostream = None
+
+    if model == 'Chromecast':
+        if streams['container'].__contains__('flv'):
+            tmp = tempfile.NamedTemporaryFile(prefix='castlocal_', suffix='.mp4', delete=False)
+            atexit.register(rmtmp, tmp.name)
+            print('Video type', streams['container'], 'is not supported by Chromecast.')
+            print('Converting to mp4 by ffmpeg as', tmp.name)
+            res = convertToMP4(filepath, tmp.name)
+            if res.returncode != 0:
+                print('Failed.')
+                print('error code:', res.returncode)
+                print('error message:', res.stderr)
+                sys.exit(1)
+            print('Done. Conversion success.')
+            tmp.close()
+            #ffmpeg = threading.Thread(target=convertToMP4, args=[filepath, tmp.name])
+            #ffmpeg.daemon = True
+            #ffmpeg.start()
+            return tmp.name
+        return filepath
+    elif model == 'Google Home':
+        if audiostream is None:
+            print('No audio stream is found')
+            sys.exit(1)
+        if not ['mp3', 'opus'].__contains__(audiostream['format']):
+            tmp = tempfile.NamedTemporaryFile(prefix='castlocal_', suffix='.mp3', delete=False)
+            atexit.register(rmtmp, tmp.name)
+            print('Audio type', audiostream['format'], 'is not supported by Google Home.')
+            print('Converting to mp3 by ffmpeg as', tmp.name)
+            res = convertToMP3(filepath, tmp.name)
+            if res.returncode != 0:
+                print('Failed.')
+                print('error code:', res.returncode)
+                print('error message:', res.stderr)
+                sys.exit(1)
+            print('Done. Conversion success.')
+            tmp.close()
+            #ffmpeg = threading.Thread(target=convertToMP3, args=[filepath, tmp.name])
+            #ffmpeg.daemon = True
+            #ffmpeg.start()
+            return tmp.name
+        return filepath
 
 def isURL(path):
     try:
