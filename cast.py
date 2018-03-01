@@ -13,7 +13,7 @@ from player import Player
 
 # Configuration of HTTPServer
 PORT = 8080
-IP_ADDRESS = "192.168.11.40"
+IP_ADDRESS = "192.168.11.18"
 
 def getMediaURL(filepath):
     """
@@ -37,7 +37,9 @@ def HTTPServer(filepath):
     #  and it is accesible through a variable named "filename" (<path:filename>).
     @app.route('/<path:filename>')
     def send_file(filename):
-        filename = '/'+filename
+        if os.name != 'nt':
+            # Initial '/' is trimed on linux
+            filename = '/'+filename
         return send_from_directory(path.dirname(filename), path.basename(filename))
     app.run(host='0.0.0.0', port=PORT)
 
