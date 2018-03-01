@@ -6,53 +6,21 @@ import sys
 
 if os.name == 'nt':
     from msvcrt import getch
-    keymaps = {
-        71: 'HOME',
-        72: 'KEY_UP',
-        73: 'PAGE_UP',
-        75: 'KEY_LEFT',
-        77: 'KEY_RIGHT',
-        79: 'END',
-        80: 'KEY_DOWN',
-        81: 'PAGE_DOWN',
-        82: 'INSERT',
-        83: 'DEL',
-    }
+    import keymap_windows
+    keymap = keymap_windows.keymap
     def getInput():
         key = getch()
         if ord(key) == 224:
             key = ord(getch())
-            if keymaps.__contains__(key):
-                return keymaps[key]
+            if keymap.__contains__(key):
+                return keymap[key]
             return
         return key.decode('utf-8')
 
 elif os.name == 'posix':
     import termios, tty
-    keymaps = {
-        '\x1b\x4f\x50': 'F1',
-        '\x1b\x4f\x51': 'F2',
-        '\x1b\x4f\x52': 'F3',
-        '\x1b\x4f\x53': 'F4',
-        '\x1b\x5b\x32\x30\x7e': 'F9',
-        '\x1b\x5b\x32\x31\x7e': 'F10',
-        '\x1b\x5b\x32\x33\x7e': 'F11',
-        '\x1b\x5b\x32\x34\x7e': 'F12',
-        '\x1b\x5b\x31\x35\x7e': 'F5',
-        '\x1b\x5b\x31\x37\x7e': 'F6',
-        '\x1b\x5b\x31\x38\x7e': 'F7',
-        '\x1b\x5b\x31\x39\x7e': 'F8',
-        '\x1b\x5b\x31\x7e': 'HOME',
-        '\x1b\x5b\x32\x7e': 'INSERT',
-        '\x1b\x5b\x33\x7e': 'DEL',
-        '\x1b\x5b\x34\x7e': 'END',
-        '\x1b\x5b\x35\x7e': 'PAGE_UP',
-        '\x1b\x5b\x36\x7e': 'PAGE_DOWN',
-        '\x1b\x5b\x41': 'KEY_UP',
-        '\x1b\x5b\x42': 'KEY_DOWN',
-        '\x1b\x5b\x43': 'KEY_RIGHT',
-        '\x1b\x5b\x44': 'KEY_LEFT',
-    }
+    import keymap_linux
+    keymap = keymap_linux.keymap
 
     def readChar():
         fd = sys.stdin.fileno()
@@ -99,8 +67,8 @@ elif os.name == 'posix':
     def getInput():
         key = readKey()
         if len(key) > 1:
-            if keymaps.__contains__(key):
-                return keymaps[key]
+            if keymap.__contains__(key):
+                return keymap[key]
             return
         return key
 else:
@@ -110,15 +78,22 @@ else:
 def listen(player, keyEventHandler):
     print('Press q to exit.')
     print('Press h to show key maps.')
+    import time
     while True:
-        keyEventHandler(player, getInput())
+        char = getInput()
+        player.update()
+        if keyEventHandler(player, char) == 0:
+            break
 
 def defaultKeyEventHandler(player, char):
     if char is None:
         return
     elif char  == 'q' or char == '\x1b':
         print('Exit.')
-        sys.exit(0)
+        player.stop()
+        return 0
+    elif char == 'c':
+        print(player.getCurrentTime())
     elif char == 'i':
         player.seek(0.) # restart
     elif char == 'b':

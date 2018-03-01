@@ -12,7 +12,7 @@ from player import Player
 
 # Configuration of HTTPServer
 PORT = 8080
-IP_ADDRESS = "192.168.11.18" # NOTE: "localhost" does not work with pychromecast
+IP_ADDRESS = "192.168.11.40"
 
 def getMediaURL(filepath):
     """
@@ -21,18 +21,20 @@ def getMediaURL(filepath):
     """
     if len(filepath) == 0:
         return 'http://'+IP_ADDRESS+':'+str(PORT)
-    return 'http://'+IP_ADDRESS+':'+str(PORT)+'/'+path.abspath(filepath)
+    #return 'http://'+IP_ADDRESS+':'+str(PORT)+'/'+path.abspath(filepath)
+    return 'http://'+IP_ADDRESS+':'+str(PORT)+path.abspath(filepath)
 
 def HTTPServer(filepath):
     from flask import Flask, send_from_directory
-    p = path.abspath(filepath)
     # The directory of the filepath must be set "static_folder",
     # from which Flask can serve static files.
-    app = Flask(__name__, static_folder=path.dirname(p))
+    d = path.dirname(path.abspath(filepath))
+    app = Flask(__name__, static_folder=d)
     # <path:filename> means that app accepts filepath (by putting <path:>),
     #  and it is accesible through a variable named "filename" (<path:filename>).
     @app.route('/<path:filename>')
     def send_file(filename):
+        filename = '/'+filename
         return send_from_directory(path.dirname(filename), path.basename(filename))
     app.run(host='0.0.0.0', port=PORT)
 
@@ -66,7 +68,7 @@ def getCastByDevice(name):
         return
     return cast
 
-def streamFileTo(filename, cast):
+def streamFileTo(filepath, cast):
     """
     stream starts streaming the media with a given filename to the given cast device.
     filename is a absolute/relative path to the file.
@@ -76,14 +78,14 @@ def streamFileTo(filename, cast):
     """
     # Start HTTP server as a thread
     print("Starting HTTP server.")
-    t = threading.Thread(target=HTTPServer, args=[filename])
+    t = threading.Thread(target=HTTPServer, args=[filepath])
     t.daemon = True # NOTE: running HTTP server as a daemon process is necessary.
     t.start()
 
     # If the cast device is Googlg Home, only cast audio.
     # If the cast device is Chromecast, cast video.
     # Otherwise, finish without casting a file.
-    _, ext = path.splitext(filename)
+    _, ext = path.splitext(filepath)
     # TODO: Check if the file extension (ext) is one of the audio/video's extensions such as mp3, mp4, m4a, aac etc.
     # NOTE: Some audio/video formats (containers?) are not supported by Cast devices.
     #       Since flv video, for example, seems not to be supported by Chromecast,
@@ -98,16 +100,21 @@ def streamFileTo(filename, cast):
         return
 
     # Get URL of the file from filepath
-    url = getMediaURL(filename)
+    url = getMediaURL(filepath)
     print("Streaming the media on "+url)
 
     # Send the URL to the cast device and start streaming
     c = cast.media_controller
+    time.sleep(1) # wait until HTTP server starts
     c.play_media(url, mime)
 
     # Stop cast when terminate
     def stop():
-        c.stop()
+        try:
+            # stop media just in case of unusual procedure.
+            c.stop()
+        except:
+            pass
     atexit.register(stop)
 
     # Returns a media_controller instance to control the media outside this function.
