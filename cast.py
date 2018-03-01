@@ -143,7 +143,12 @@ def getStreams(filepath):
     """
     Get information of audio/video streams using FFMPEG
     """
-    raw = subprocess.getoutput(['ffmpeg', '-i', filepath])
+    res = subprocess.run(['ffmpeg', '-i', filepath], stderr=subprocess.PIPE)
+    if res.returncode != 1:
+        print('Unable to get media information.')
+        print('error code:', res.returncode)
+        print('error message:', res.stderr)
+    raw = res.stderr.decode('utf-8')
     stream = {'containers': [], 'audio':[], 'video':[]}
     try:
         Input = raw.split('Input')[1]
@@ -215,7 +220,21 @@ def rmtmp(filepath, timeout=5.):
         except PermissionError:
             print('Failed. You should manually remove ', filepath)
 
+def hasFFMPEG():
+    """
+    Check if ffmpeg is available
+    """
+    cmd = ['ffmpeg', '-version']
+    if subprocess.run(cmd).returncode == 0:
+        return True
+    return False
+
 def checkMedia(filepath, model):
+    if not hasFFMPEG():
+        print('Warning! ffmpeg does not exist in the PATH.')
+        print('Skip checking media file.')
+        return filepath
+
     streams = getStreams(filepath)
     try:
         audiostream = streams['audio'][0]
