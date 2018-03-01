@@ -102,16 +102,15 @@ def streamFileTo(filepath, cast):
         mime = 'audio/'+ext
     else:
         print("Unknown model_name " + modelName)
-        return
+        return 1
 
     # Get URL of the file from filepath
     url = getMediaURL(filepath)
     print("Streaming the media on "+url)
 
     # Send the URL to the cast device and start streaming
-    c = cast.media_controller
     time.sleep(1) # wait until HTTP server starts
-    c.play_media(url, mime)
+    cast.media_controller.play_media(url, mime)
 
     # Stop cast when terminate
     def stop():
@@ -121,9 +120,6 @@ def streamFileTo(filepath, cast):
         except:
             pass
     atexit.register(stop)
-
-    # Returns a media_controller instance to control the media outside this function.
-    return c
 
 def main():
     # Read commandline args
@@ -146,13 +142,12 @@ def main():
     atexit.register(disconnect)
 
     # Start streaming
-    controller = streamFileTo(filename, cast)
-    if controller is None:
+    if streamFileTo(filename, cast) == 1:
         print("Unable to start streaming")
         sys.exit(1)
 
     # Listen key event
-    player = Player(controller)
+    player = Player(cast)
     listen(player, defaultKeyEventHandler)
 
 if __name__ == '__main__':

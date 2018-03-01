@@ -113,6 +113,10 @@ def defaultKeyEventHandler(player, char):
     elif ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].__contains__(char):
         i = float(char)
         player.seek(player.controller.status.duration*i/10.)
+    elif char == 'KEY_UP':
+        player.volumeUp(0.05)
+    elif char == 'KEY_DOWN':
+        player.volumeDown(0.05)
     elif char == 'h':
         print("""
 Keymaps:

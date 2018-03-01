@@ -3,8 +3,9 @@
 import time
 
 class Player:
-    def __init__(self, controller, playing=True):
-        self.controller = controller
+    def __init__(self, cast, playing=True):
+        self.cast = cast
+        self.controller = cast.media_controller
         # It is better to use this flag rather than controller.status.player_state,
         # since the time lag in updating the status sometimes cause unexpected behavior.
         self.playing = playing
@@ -21,6 +22,12 @@ class Player:
         #       Therefore, it is necessary to pause/play or play/pause in order
         #       to update the status and get the correct current time.
         return self.controller.status.current_time
+
+    def volumeUp(self, delta=0.1):
+        self.cast.volume_up(delta)
+
+    def volumeDown(self, delta=0.1):
+        self.cast.volume_down(delta)
 
     def forward(self, sec):
         """
