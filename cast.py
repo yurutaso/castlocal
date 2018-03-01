@@ -225,7 +225,7 @@ def hasFFMPEG():
     Check if ffmpeg is available
     """
     cmd = ['ffmpeg', '-version']
-    if subprocess.run(cmd).returncode == 0:
+    if subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE).returncode == 0:
         return True
     return False
 
