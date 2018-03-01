@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import pychromecast
-from os import path
 import os
 import sys
 import time
@@ -25,15 +24,15 @@ def getMediaURL(filepath, port=8080):
     if len(filepath) == 0:
         return 'http://'+ip+':'+str(port)
     if os.name == 'nt':
-        return 'http://'+ip+':'+str(port)+'/'+path.abspath(filepath)
+        return 'http://'+ip+':'+str(port)+'/'+os.path.abspath(filepath)
     else:
-        return 'http://'+ip+':'+str(port)+path.abspath(filepath)
+        return 'http://'+ip+':'+str(port)+os.path.abspath(filepath)
 
 def HTTPServer(filepath, port=8080):
     from flask import Flask, send_from_directory
     # The directory of the filepath must be set "static_folder",
     # from which Flask can serve static files.
-    d = path.dirname(path.abspath(filepath))
+    d = os.path.dirname(os.path.abspath(filepath))
     app = Flask(__name__, static_folder=d)
     # <path:filename> means that app accepts filepath (by putting <path:>),
     #  and it is accesible through a variable named "filename" (<path:filename>).
@@ -41,7 +40,7 @@ def HTTPServer(filepath, port=8080):
     def send_file(filename):
         if os.name != 'nt':
             filename = '/'+filename # NOTE: Initial '/' is trimed on linux
-        return send_from_directory(path.dirname(filename), path.basename(filename))
+        return send_from_directory(os.path.dirname(filename), os.path.basename(filename))
     app.run(host='0.0.0.0', port=port)
 
 def getCastByFriendlyName(name):
@@ -82,7 +81,7 @@ def streamURLTo(url, cast):
     # If the cast device is Googlg Home, only cast audio.
     # If the cast device is Chromecast, cast video.
     # Otherwise, finish without casting a file.
-    _, ext = path.splitext(url)
+    _, ext = os.path.splitext(url)
     # TODO: Check if the file extension (ext) is one of the audio/video's extensions such as mp3, mp4, m4a, aac etc.
     # NOTE: Some audio/video formats (containers?) are not supported by Cast devices.
     #       For example, flv is not supported by Chromecast, and m4a is not supported by Google Home.
@@ -142,7 +141,7 @@ def main():
         print("Usage: "+args[0]+" 'name of cast device' 'filepath or URL'")
         sys.exit(1)
     castname = args[1]
-    filepath = args[2]
+    path = args[2]
 
     # Find cast device
     cast = getCastByFriendlyName(castname)
@@ -156,10 +155,10 @@ def main():
     atexit.register(disconnect)
 
     # Start streaming
-    if isURL(filepath):
-        ok = streamURLTo(filepath, cast)
+    if isURL(path):
+        ok = streamURLTo(path, cast)
     else:
-        ok = streamFileTo(filepath, cast)
+        ok = streamFileTo(path, cast)
     if ok is not None:
         print("Unable to start streaming")
         sys.exit(1)
