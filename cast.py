@@ -3,6 +3,7 @@
 
 import pychromecast
 from os import path
+import os
 import sys
 import time
 import threading
@@ -21,8 +22,10 @@ def getMediaURL(filepath):
     """
     if len(filepath) == 0:
         return 'http://'+IP_ADDRESS+':'+str(PORT)
-    #return 'http://'+IP_ADDRESS+':'+str(PORT)+'/'+path.abspath(filepath)
-    return 'http://'+IP_ADDRESS+':'+str(PORT)+path.abspath(filepath)
+    if os.name == 'nt':
+        return 'http://'+IP_ADDRESS+':'+str(PORT)+'/'+path.abspath(filepath)
+    else:
+        return 'http://'+IP_ADDRESS+':'+str(PORT)+path.abspath(filepath)
 
 def HTTPServer(filepath):
     from flask import Flask, send_from_directory
