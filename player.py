@@ -16,11 +16,10 @@ class Player:
 
     def getCurrentTime(self):
         """
-        get CORRECT current_time of the media_controller c.
+        Get current_time of the media_controller
         """
-        # NOTE: c.status.current_time does not show real time information.
-        #       Therefore, it is necessary to pause/play or play/pause in order
-        #       to update the status and get the correct current time.
+        # NOTE: It is necessary to call Player.update(), which internally calls media_controller.update_status()
+        #       BEFORE calling getCurrentTIme(). Otherwise, this function returns the old status.
         return self.controller.status.current_time
 
     def volumeUp(self, delta=0.1):
@@ -31,21 +30,21 @@ class Player:
 
     def forward(self, sec):
         """
-        Forward the location of the media_controller c by a given second.
+        Forward the location of the media_controller by a given second.
         """
         current = self.getCurrentTime()
         self.seek(min(current+sec, self.controller.status.duration))
 
     def backward(self, sec):
         """
-        Backward the location of the media_controller c by a given second.
+        Backward the location of the media_controller by a given second.
         """
         current = self.getCurrentTime()
         self.seek(max(current-sec, 0))
 
     def switch(self):
         """
-        Switch the play/pause status of the media_controller c.
+        Switch the play/pause status of the media_controller.
         """
         if self.playing:
             self.pause()

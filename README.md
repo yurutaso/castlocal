@@ -1,8 +1,8 @@
-Cast a local audio/video file to Google Home or Chromecast using pychromecast.
+Cast a audio/video from the local device or URL to Google Home or Chromecast using pychromecast.
 
-Usage: python cast.py "name of the cast device" "/path/to/media/file"
+Usage: python cast.py "name of the cast device" "/path/to/media/file or URL"
 
-Requirements: pip install Flask PyChromecast pynput
+Requirements: pip install Flask PyChromecast
 
 On Windows, it is covinient to put SendToCast.bat at the shell:sendto directly 
 to cast the media file from the context menu.
